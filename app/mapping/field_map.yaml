@@ -1,0 +1,16 @@
+# The single source of truth for the "Company Data" box's scalar fields.
+# Add a new field here (plus a matching attribute on CompanyData in
+# app/extraction/schema.py) to extend the template - no other file needs
+# to change.
+
+company_data_fields:  # list of company data field definitions
+  - label: "Sector"  # display label for sector field
+    source_attr: "sector"  # source attribute name on CompanyData model
+  - label: "Rating"  # display label for rating field
+    source_attr: "rating"  # source attribute name on CompanyData model
+  - label: "Target Price"  # display label for target price field
+    source_attr: "target_price"  # source attribute name on CompanyData model
+  - label: "CMP"  # display label for current market price field
+    source_attr: "cmp"  # source attribute name on CompanyData model
+  - label: "Market Cap"  # display label for market cap field
+    source_attr: "market_cap"  # source attribute name on CompanyData model
