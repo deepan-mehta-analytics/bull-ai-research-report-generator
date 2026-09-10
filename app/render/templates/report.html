@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ company_name }} - Research Report</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 10pt; }
+  .header-band { background-color: #0f7a6c; color: #ffffff; padding: 10px 14px; }
+  .header-band h1 { margin: 0; font-size: 18pt; }
+  .header-band .subtitle { font-size: 9pt; opacity: 0.9; }
+  .section-title { color: #0f7a6c; font-size: 12pt; font-weight: bold; margin-top: 16px; border-bottom: 1px solid #0f7a6c; padding-bottom: 2px; }
+  table.data-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.data-table th, table.data-table td { border: 1px solid #cccccc; padding: 4px 6px; font-size: 9pt; text-align: left; }
+  table.data-table th { background-color: #e6f2f0; }
+  .missing { color: #999999; font-style: italic; }
+  ul.highlights { margin: 6px 0; padding-left: 18px; }
+  ul.highlights li { margin-bottom: 3px; font-size: 9.5pt; }
+  .chart-cell { display: inline-block; width: 48%; vertical-align: top; margin: 1%; }
+  .chart-cell img { width: 100%; }
+  .disclaimer { font-size: 7.5pt; color: #555555; border-top: 1px solid #cccccc; margin-top: 20px; padding-top: 6px; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+  <div class="header-band">
+    <h1>{{ company_name }}</h1>
+    <div class="subtitle">Auto-generated research report</div>
+  </div>
+
+  <div class="section-title">Company Data</div>
+  <table class="data-table">
+    {% for row in company_data_rows %}
+    <tr>
+      <th>{{ row.label }}</th>
+      <td class="{{ 'missing' if row.value == missing_text else '' }}">{{ row.value }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="section-title">Business Summary</div>
+  <p class="{{ 'missing' if business_summary == missing_text else '' }}">{{ business_summary }}</p>
+
+  <div class="section-title">Key Highlights</div>
+  <ul class="highlights">
+    {% for item in highlights %}
+    <li class="{{ 'missing' if item == missing_text else '' }}">{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <div class="section-title">Outlook</div>
+  <p class="{{ 'missing' if outlook == missing_text else '' }}">{{ outlook }}</p>
+
+  <div class="section-title">Quarterly Financials</div>
+  <table class="data-table">
+    <tr>
+      <th>Metric</th>
+      {% if financial_table_rows %}
+      {% for label in financial_table_rows[0].period_labels %}
+      <th>{{ label }}</th>
+      {% endfor %}
+      {% endif %}
+      <th>YoY Growth</th>
+      <th>QoQ Growth</th>
+    </tr>
+    {% for row in financial_table_rows %}
+    <tr>
+      <td>{{ row.metric_label }}</td>
+      {% for value in row.values %}
+      <td class="{{ 'missing' if value == missing_text else '' }}">{{ value }}</td>
+      {% endfor %}
+      <td class="{{ 'missing' if row.yoy_growth == missing_text else '' }}">{{ row.yoy_growth }}</td>
+      <td class="{{ 'missing' if row.qoq_growth == missing_text else '' }}">{{ row.qoq_growth }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="section-title">Charts</div>
+  <div class="charts-grid">
+    {% for chart in charts %}
+    <div class="chart-cell"><img src="{{ chart }}" alt="chart"></div>
+    {% endfor %}
+  </div>
+
+  <div class="page-break"></div>
+
+  <div class="section-title">Full Financials</div>
+  <table class="data-table">
+    <tr>
+      <th>Metric</th>
+      {% if full_financials_rows %}
+      {% for label in full_financials_rows[0].period_labels %}
+      <th>{{ label }}</th>
+      {% endfor %}
+      {% endif %}
+    </tr>
+    {% for row in full_financials_rows %}
+    <tr>
+      <td>{{ row.metric_label }}</td>
+      {% for value in row.values %}
+      <td class="{{ 'missing' if value == missing_text else '' }}">{{ value }}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="section-title">Historical Ratings</div>
+  <ul class="highlights">
+    {% for item in historical_ratings %}
+    <li class="{{ 'missing' if item == missing_text else '' }}">{{ item }}</li>
+    {% endfor %}
+  </ul>
+
+  <div class="disclaimer">
+    This report was auto-generated from an uploaded document using AI-assisted extraction (Claude).
+    It has not been reviewed by a registered research analyst and does not constitute investment
+    advice or a recommendation to buy or sell any security. Figures are extracted directly from the
+    source document supplied by the user; fields not present in that document are marked
+    "Not available in source document" rather than estimated or inferred.
+  </div>
+</body>
+</html>
