@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Secrets
+.env
+
+# Agent-workflow files are local-only, never committed (see global CLAUDE.md Rule 18)
+/CLAUDE.md
+/workflow_status.md
+/workflow_status_archive.md
