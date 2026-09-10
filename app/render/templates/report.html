@@ -66,7 +66,7 @@
     {% for row in financial_table_rows %}
     <tr>
       <td>{{ row.metric_label }}</td>
-      {% for value in row.values %}
+      {% for value in row['values'] %}
       <td class="{{ 'missing' if value == missing_text else '' }}">{{ value }}</td>
       {% endfor %}
       <td class="{{ 'missing' if row.yoy_growth == missing_text else '' }}">{{ row.yoy_growth }}</td>
@@ -97,7 +97,7 @@
     {% for row in full_financials_rows %}
     <tr>
       <td>{{ row.metric_label }}</td>
-      {% for value in row.values %}
+      {% for value in row['values'] %}
       <td class="{{ 'missing' if value == missing_text else '' }}">{{ value }}</td>
       {% endfor %}
     </tr>
