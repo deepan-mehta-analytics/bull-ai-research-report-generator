@@ -4,6 +4,9 @@ __pycache__/
 .venv/
 venv/
 
+# Local Claude Code tooling state (session/scheduling data, not project content)
+/.claude/
+
 # Secrets
 .env
 
@@ -11,3 +14,9 @@ venv/
 /CLAUDE.md
 /workflow_status.md
 /workflow_status_archive.md
+
+# Local-only input materials excluded from version control - not ours to
+# redistribute publicly. Only OUR generated output (examples/*.pdf) is ever
+# committed. Deliberately generic: no filenames or source identifiers appear
+# here or anywhere else in a tracked file.
+/local-input/
