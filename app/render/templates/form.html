@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Research Report Generator</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f6f5; display: flex; justify-content: center; padding-top: 60px; }
+  .card { background: #ffffff; border-radius: 8px; padding: 32px; width: 380px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  h1 { font-size: 18px; color: #0f7a6c; margin-top: 0; }
+  label { display: block; font-size: 13px; margin-top: 16px; margin-bottom: 4px; color: #333333; }
+  input[type="text"], input[type="file"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #cccccc; border-radius: 4px; }
+  button { margin-top: 20px; width: 100%; padding: 10px; background: #0f7a6c; color: #ffffff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
+  .error { background: #fdecea; color: #b3261e; padding: 10px; border-radius: 4px; margin-bottom: 12px; font-size: 13px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Research Report Generator</h1>
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/generate" enctype="multipart/form-data">
+      <label for="company_name">Company name</label>
+      <input type="text" id="company_name" name="company_name" required>
+      <label for="file">Context document (PDF, CSV, or TXT)</label>
+      <input type="file" id="file" name="file" accept=".pdf,.csv,.txt" required>
+      <button type="submit">Generate report</button>
+    </form>
+  </div>
+</body>
+</html>
