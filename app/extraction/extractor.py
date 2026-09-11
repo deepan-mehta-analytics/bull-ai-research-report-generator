@@ -36,10 +36,11 @@ def extract_report_data(  # main extraction function exposed to callers
         client = anthropic.Anthropic()  # if not, create a real Anthropic client that will use ANTHROPIC_API_KEY from environment
     model = os.environ.get("ANTHROPIC_MODEL", DEFAULT_MODEL)  # allow cheaper models for dev iteration without changing code
     prompt = _build_prompt(document_text, company_name)  # call helper to build the user message containing document and company name
-    response = client.messages.parse(  # call Claude's structured output API to get validated parsing
+    with client.messages.stream(  # use streaming: non-streaming .parse() truncated ICICI Bank's dense financials table at both 16000 and 20000 max_tokens, and the SDK itself refuses non-streaming calls above ~20000 as a >10min-risk request - streaming has neither ceiling
         model=model,  # use the model from environment or the default
-        max_tokens=16000,  # allow sufficient tokens for complex financial documents with multiple tables
+        max_tokens=32000,  # headroom well beyond the 20000 truncation point (~40600 chars of JSON produced before cutoff); safe now that streaming lifts the non-streaming time-risk cap that blocked this same value earlier
         messages=[{"role": "user", "content": prompt}],  # pass the assembled prompt as a user message
         output_format=ReportData,  # tell Claude to validate and return output as ReportData schema
-    )
+    ) as stream:  # open the stream and consume it fully before reading the parsed result
+        response = stream.get_final_message()  # block until the stream completes and return the accumulated, schema-validated message
     return response.parsed_output  # extract and return the parsed ReportData object from Claude's response

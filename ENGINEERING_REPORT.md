@@ -52,8 +52,9 @@ Considered during design, deliberately not built (see spec Section 8):
 - Dual-axis bar+line charts (value + growth %) matching the sample's exact chart style, instead of
   v1's bar-only charts
 - **Provider-agnostic LLM extraction.** Considered supporting any LLM provider's API key, not just
-  Anthropic's. Descoped: Anthropic's `client.messages.parse(output_format=ReportData)` is a
-  convenience wrapper with automatic schema validation against the Pydantic model; a
+  Anthropic's. Descoped: Anthropic's `output_format=ReportData` (available on both
+  `client.messages.parse()` and the streaming `client.messages.stream()` the extractor now uses) is
+  a convenience wrapper with automatic schema validation against the Pydantic model; a
   provider-agnostic version (e.g. via `litellm`) would lose that guarantee and require hand-rolled
   JSON-schema prompting, manual parsing, and retry logic per provider — a new
   `app/extraction/providers/` module, a new ADR, and rework of the already-reviewed extractor, none

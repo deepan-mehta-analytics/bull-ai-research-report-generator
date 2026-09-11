@@ -73,7 +73,7 @@ It implements:
 | Language | Python 3.11 | Pipeline and API implementation |
 | Web framework | FastAPI + uvicorn | Serves the upload form and the `/generate` endpoint |
 | Form parsing | python-multipart | Parses the multipart form upload (company name + file) |
-| LLM extraction | Anthropic SDK | Structured extraction via `client.messages.parse` |
+| LLM extraction | Anthropic SDK | Structured extraction via `client.messages.stream` + `output_format` |
 | Schema validation | Pydantic | Defines and validates the extracted report schema (`app/extraction/schema.py`) |
 | Document ingestion | pdfplumber + pandas | Parses PDF text/tables and CSV data (`app/ingestion/loaders.py`) |
 | Table formatting | tabulate | Formats tabular data during ingestion/mapping |
@@ -269,12 +269,12 @@ Anthropic API from real financial documents:
 - `jsw_energy_report.pdf` — demonstrates the **populated-fields path**: a power company's own
   quarterly results deck yields a full financial table with period columns, YoY figures, and charts.
 - `icici_bank_report.pdf` — demonstrates the **graceful-degradation path**: the source document
-  doesn't support every field, so those cells show "Not available in source document" instead of
-  being fabricated.
+  doesn't support every field (no Rating/CMP/Target Price/Market Cap of its own), so those cells
+  show "Not available in source document" instead of being fabricated — while the financial table,
+  highlights, and outlook are fully populated from the document's real figures.
 
-Both examples predate live market-data enrichment (generated without a ticker), so neither shows a
-populated Live Market Data section — regenerate via `scripts/generate_samples.py` with a ticker
-argument to see that path.
+Both examples were regenerated with a real ticker (`JSWENERGY.NS`, `ICICIBANK.NS`) and show a
+populated Live Market Data section sourced independently from Yahoo Finance.
 
 ---
 
