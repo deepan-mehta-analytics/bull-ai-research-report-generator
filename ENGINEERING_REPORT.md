@@ -20,6 +20,10 @@ what was deliberately left out of scope, per the assessment's own "minimal web a
   available in source document" rather than being invented or dropped; the disclaimer section
   contains generic, honest text instead of reproducing the original sample's actual regulatory
   filing content.
+- **ADR-0005 — Live market-data enrichment as a second, independent source.** Rating/CMP/Target
+  Price/Market Cap/Sector are filled from live Yahoo Finance data, never merged with
+  document-extracted content, never guessed on an ambiguous ticker match, and never able to block
+  or break the core report if the lookup fails.
 
 ## Alignment with Bull AI's own product
 

@@ -24,8 +24,9 @@ analyst-style report out — at MVP scope.
 [![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Anthropic Claude](https://img.shields.io/badge/Anthropic-Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/)
-[![Tests](https://img.shields.io/badge/Tests-31_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
+[![Tests](https://img.shields.io/badge/Tests-73_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 [![Status](https://img.shields.io/badge/Status-Complete-brightgreen?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
+[![Live Market Data](https://img.shields.io/badge/Live_Data-Yahoo_Finance-orange?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 
 ---
 
@@ -49,6 +50,11 @@ It implements:
 - **Universal missing-field policy** — every field, table row, and chart independently renders
   "Not available in source document" instead of being invented or silently dropped
   (`app/mapping/mapper.py`, `app/mapping/field_map.yaml`).
+- **Live market-data enrichment** — Rating, CMP, Target Price, Market Cap, and Sector, almost never
+  present in an arbitrary uploaded document, are filled from live Yahoo Finance data as a second,
+  independent, clearly-labeled source — never merged with document-extracted content, never
+  guessed, and never able to block or break the underlying report if the lookup fails
+  (`app/market_data/`, see ADR-0005).
 - **Matplotlib chart rendering** — chart series from the extracted data are rendered as bar charts
   and embedded directly in the PDF as base64 PNG data URIs, with no external image hosting
   (`app/charts/chart_builder.py`).
@@ -73,6 +79,7 @@ It implements:
 | Table formatting | tabulate | Formats tabular data during ingestion/mapping |
 | Config | PyYAML | Loads the field-mapping config (`field_map.yaml`) |
 | Charting | matplotlib (Agg backend) | Renders chart series to PNG images |
+| Live market data | yfinance | Fetches live rating/price/market-cap data from Yahoo Finance (`app/market_data/`) |
 | Rendering | Jinja2 + WeasyPrint | Renders the HTML report template and converts it to PDF |
 | Testing | pytest + httpx (`TestClient`) | Unit and API-level test suite |
 
@@ -104,6 +111,9 @@ that stays correct under that inconsistency instead of failing silently.
 [extract_report_data]  ── app/extraction/   Claude structured extraction → validated ReportData
         │
         ▼
+[get_market_data]  ── app/market_data/      best-effort live Yahoo Finance lookup, never blocks/breaks the report
+        │
+        ▼
 [build_charts]  ── app/charts/              render chart series to base64 PNG data URIs
         │
         ▼
@@ -122,6 +132,7 @@ that stays correct under that inconsistency instead of failing silently.
 | Ingestion | `app/ingestion/` | Turns PDF/CSV/TXT bytes into plain text |
 | Extraction | `app/extraction/` | Calls Claude to extract a validated `ReportData` schema |
 | Charts | `app/charts/` | Renders numeric chart series to embeddable PNG images |
+| Market data | `app/market_data/` | Best-effort live Yahoo Finance lookup for Rating/CMP/Target Price/Market Cap/Sector |
 | Mapping | `app/mapping/` | Maps extracted data to template fields with a missing-field policy |
 | Render | `app/render/` | Renders the Jinja2 HTML template and converts it to PDF via WeasyPrint |
 
@@ -144,6 +155,10 @@ bull-ai-research-report-generator/
 │   │   └── field_map.yaml               ← field mapping configuration
 │   ├── charts/
 │   │   └── chart_builder.py             ← chart series → base64 PNG data URIs
+│   ├── market_data/
+│   │   ├── schema.py                    ← MarketDataResult model
+│   │   ├── formatting.py                ← price/market-cap/rating formatting helpers
+│   │   └── lookup.py                    ← ticker resolution + timeout-bounded Yahoo Finance fetch
 │   └── render/
 │       ├── renderer.py                  ← Jinja2 HTML render + WeasyPrint PDF conversion
 │       └── templates/
@@ -155,7 +170,8 @@ bull-ai-research-report-generator/
 │       ├── ADR-0001-no-rag.md           ← why no retrieval layer
 │       ├── ADR-0002-weasyprint-matplotlib.md   ← why this PDF/chart toolchain
 │       ├── ADR-0003-plain-html-frontend.md     ← why zero client JavaScript
-│       └── ADR-0004-full-template-fidelity.md  ← template fidelity + missing-field policy
+│       ├── ADR-0004-full-template-fidelity.md  ← template fidelity + missing-field policy
+│       └── ADR-0005-live-market-data-enrichment.md  ← live market data as a second, independent source
 │
 ├── examples/
 │   ├── jsw_energy_report.pdf            ← sample report: fully populated fields path
@@ -171,6 +187,8 @@ bull-ai-research-report-generator/
 │   ├── test_extractor.py                ← Claude extraction call, mocked
 │   ├── test_ingestion.py                ← PDF/CSV/TXT loaders
 │   ├── test_mapping.py                  ← missing-field mapping behavior
+│   ├── test_market_data.py              ← market-data schema + formatting helpers
+│   ├── test_market_data_lookup.py       ← ticker resolution, fetch, timeout, ticker-typo fallback
 │   └── test_renderer.py                 ← HTML render + PDF conversion
 │
 └── requirements.txt                     ← pinned Python dependencies
@@ -196,6 +214,8 @@ bull-ai-research-report-generator/
    ```
 4. Open `http://127.0.0.1:8000`, enter a company name, upload a PDF/CSV/TXT document, and click
    "Generate report" to download the PDF.
+5. Optionally enter a stock ticker (e.g. `JSWENERGY.NS`) to include live market data in the report,
+   or leave it blank to auto-match from the company name.
 
 **Windows note:** WeasyPrint needs the GTK3 runtime libraries discoverable on Windows. If
 `import weasyprint` fails with a `cannot load library` `OSError`, install the GTK3 runtime (e.g.
@@ -221,9 +241,10 @@ Tests run automatically on every push/PR via GitHub Actions — see
 pytest
 ```
 
-**31 passed**, 0 failed (verified against `main`, with `WEASYPRINT_DLL_DIRECTORY` set on Windows).
-The suite is fully mocked against the Anthropic API — no network access or API key is required to
-run it. CI (`.github/workflows/tests.yml`) runs the same suite on every push/PR.
+**73 passed**, 0 failed (verified against `main`, with `WEASYPRINT_DLL_DIRECTORY` set on Windows).
+The suite is fully mocked against the Anthropic API and against Yahoo Finance (`yfinance`) — no
+network access or API key is required to run it. CI (`.github/workflows/tests.yml`) runs the same
+suite on every push/PR.
 
 | Test file | Covers |
 |---|---|
@@ -232,6 +253,8 @@ run it. CI (`.github/workflows/tests.yml`) runs the same suite on every push/PR.
 | `test_extractor.py` | Claude extraction call (mocked) |
 | `test_mapping.py` | Missing-field mapping behavior and null-safety |
 | `test_charts.py` | Chart series → base64 PNG rendering |
+| `test_market_data.py` | Market-data schema defaults and price/market-cap/rating formatting |
+| `test_market_data_lookup.py` | Ticker resolution, fetch, the 8s timeout guarantee, ticker-typo fallback |
 | `test_renderer.py` | Jinja2 HTML render + WeasyPrint PDF conversion |
 | `test_api.py` | `/generate` route, success and error paths |
 
@@ -269,11 +292,25 @@ Anthropic API from real financial documents:
 - A broad `except Exception` around the pipeline swallows tracebacks server-side with no logging
   (acceptable for MVP scope, noted here as a gap).
 - No upload file-size cap.
+- Live market-data enrichment depends on an unofficial Yahoo Finance client (`yfinance`); coverage
+  and availability aren't guaranteed to stay stable over time, and the feature degrades to "not
+  available" rather than erroring when it isn't.
+- Acronym-only company names (e.g. querying just "LTTS" instead of the full registered name) may
+  fail to auto-match a ticker even when one legitimately exists — intentional, not a bug; type the
+  ticker directly in that case.
+- The two committed example PDFs show live market data as of their generation time, which will look
+  "stale" against the real market within days — inherent to what "live" means, made explicit by the
+  caption's own timestamp.
+- Charts remain v1 bar-only, single-color, single-axis — not enhanced in this release due to the
+  submission deadline. See Roadmap.
 
 ---
 
 ## 🔜 Roadmap
 
+- Richer charts: dual-axis value+growth-% overlays (wiring the already-extracted `yoy_growth`/
+  `qoq_growth` data into visuals), per-series color, value labels — explicitly deferred this release
+  to prioritize live market-data enrichment within the deadline.
 - React/Vite frontend with drag-and-drop upload
 - Async job queue with live pipeline-stage progress (Reading → Extracting → Charting → Rendering)
 - Post-generation on-screen metrics/highlights preview before download
@@ -281,7 +318,6 @@ Anthropic API from real financial documents:
 - Multi-company batch processing, report history/persistence, authentication
 - A vector-store/RAG layer for cross-report comparison (e.g. tracking guidance vs. actuals across a
   company's own report history)
-- Dual-axis bar+line charts (value + growth %) instead of v1's bar-only charts
 - Provider-agnostic LLM extraction (any provider's API key, not just Anthropic's) — see
   `ENGINEERING_REPORT.md` for why this was descoped
 
