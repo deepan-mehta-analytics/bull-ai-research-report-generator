@@ -17,7 +17,9 @@ with matplotlib, embedded as base64 data URIs in the HTML before conversion.
   `<table>`) is sufficient for this layout; avoided modern flexbox/grid in
   the template to reduce rendering-quirk risk.
 - Slightly less pixel-perfect than a headless-Chromium render of live
-  Chart.js canvases, and matplotlib charts in v1 are bar-only (no dual-axis
-  growth-percentage line overlay like the sample) — documented as a
-  considered trade-off in ENGINEERING_REPORT.md, not a limitation discovered
-  late.
+  Chart.js canvases. Charts started bar-only in v1 (no dual-axis
+  growth-percentage line overlay like the sample) as a documented, considered
+  trade-off in ENGINEERING_REPORT.md, not a limitation discovered late;
+  dual-axis growth overlays shipped in a later pass — see ADR-0006 for why
+  a dual-axis chart was chosen despite general dataviz best-practice
+  guidance against it.
