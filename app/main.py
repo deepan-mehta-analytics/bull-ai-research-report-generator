@@ -15,6 +15,8 @@ from .render.renderer import render_pdf  # Task 7: turn a template context dict 
 FORM_TEMPLATES_DIR = Path(__file__).parent / "render" / "templates"  # absolute path to the shared templates directory
 _form_environment = Environment(loader=FileSystemLoader(str(FORM_TEMPLATES_DIR)), autoescape=True)  # Jinja2 environment scoped to that directory with HTML autoescaping on
 
+MAX_CHART_SERIES = 4  # upper bound on charts per report; extraction can otherwise return a dozen-plus series and overflow the layout
+
 app = FastAPI(title="Bull AI Research Report Generator")  # the FastAPI application instance uvicorn serves
 
 
@@ -27,7 +29,7 @@ def _render_form(error: str | None = None) -> str:  # render the upload form, op
 def _safe_filename(company_name: str) -> str:  # sanitize a company name for use in a download filename
     """Strip everything except alphanumerics/space/dash/underscore so the
     company name is safe to use in a Content-Disposition filename."""
-    cleaned = "".join(char for char in company_name if char.isalnum() or char in (" ", "_", "-"))  # keep only safe characters
+    cleaned = "".join(char for char in company_name if (char.isascii() and char.isalnum()) or char in (" ", "_", "-"))  # keep only latin-1-safe characters, since Starlette encodes headers as latin-1
     return cleaned.strip() or "report"  # fall back to a generic name if nothing safe remains
 
 
@@ -38,10 +40,10 @@ def show_form():  # handler for the root page
 
 
 @app.post("/generate")  # register POST /generate to accept the form submission
-async def generate_report(company_name: str = Form(...), file: UploadFile = File(...)):  # required form field and required uploaded file
+def generate_report(company_name: str = Form(...), file: UploadFile = File(...)):  # plain def so FastAPI runs this blocking pipeline in its threadpool, not on the event loop
     """Run the full pipeline and return the PDF, or re-render the form
     with an inline error on any failure."""
-    file_bytes = await file.read()  # read the full uploaded file into memory
+    file_bytes = file.file.read()  # read the full uploaded file into memory via the synchronous underlying file object
     try:  # run the pipeline, catching any failure to show an inline error instead of a raw 500
         document_text = load_document(file_bytes, file.filename or "")  # normalize the uploaded file into plain text
         report_data = extract_report_data(document_text, company_name)  # call Claude to extract structured report data
@@ -50,6 +52,7 @@ async def generate_report(company_name: str = Form(...), file: UploadFile = File
                 "The uploaded document didn't contain enough numerical trend data to build a chart. "
                 "Try a document with quarter-over-quarter or year-over-year figures."
             )
+        report_data.chart_series = report_data.chart_series[:MAX_CHART_SERIES]  # cap the chart count; Claude returns series in its own relevance order, so the first N are the highest-value ones
         chart_images = build_charts(report_data.chart_series)  # render each chart series to a base64 PNG data URI
         context = map_to_template_context(report_data, chart_images)  # build the missing-field-safe template context
         pdf_bytes = render_pdf(context)  # render the context to PDF bytes

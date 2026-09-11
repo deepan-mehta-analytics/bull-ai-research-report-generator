@@ -63,6 +63,9 @@ def main() -> None:  # entry point that parses argv and generates one example PD
     if not source_path.exists():  # guard: bail out clearly if the given source path doesn't exist
         print(f"  ERROR: {source_path} not found.")  # explain exactly which path was missing
         sys.exit(1)  # exit non-zero since no output can be produced
+    if not source_path.is_file():  # guard: a directory path would fail obscurely inside read_bytes()
+        print(f"  ERROR: {source_path} is a directory, not a file - pass a single source document.")  # explain the actual problem
+        sys.exit(1)  # exit non-zero since no output can be produced
     generate_one(company_name, source_path, output_filename)  # run the pipeline for the single requested document
 
 
