@@ -272,6 +272,10 @@ Anthropic API from real financial documents:
   doesn't support every field, so those cells show "Not available in source document" instead of
   being fabricated.
 
+Both examples predate live market-data enrichment (generated without a ticker), so neither shows a
+populated Live Market Data section — regenerate via `scripts/generate_samples.py` with a ticker
+argument to see that path.
+
 ---
 
 ## ⚠️ Known Limitations
