@@ -24,6 +24,8 @@
   table.financials.dense th, table.financials.dense td { font-size: 6pt; padding: 2px 2px; }
   table.financials.dense th:first-child, table.financials.dense td:first-child { width: 14%; font-size: 7pt; }
   .missing { color: #999999; font-style: italic; }
+  .provenance-note { font-size: 8pt; color: #666666; font-style: italic; margin: 2px 0 4px 0; }
+  table.market-data { page-break-inside: avoid; }
   ul.highlights { margin: 6px 0; padding-left: 18px; }
   ul.highlights li { margin-bottom: 3px; font-size: 9.5pt; }
   .chart-cell { display: inline-block; width: 48%; vertical-align: top; margin: 1%; }
@@ -47,6 +49,21 @@
     </tr>
     {% endfor %}
   </table>
+
+  <div class="section-title">Live Market Data</div>
+  {% if market_data.found %}
+  <p class="provenance-note">{{ market_data.caption }}</p>
+  <table class="data-table market-data">
+    {% for row in market_data_rows %}
+    <tr>
+      <th>{{ row.label }}</th>
+      <td class="{{ 'missing' if row.value == market_missing_text else '' }}">{{ row.value }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="missing">Live market data: not available (no confident ticker match, or the lookup failed) — not from the uploaded document.</p>
+  {% endif %}
 
   <div class="section-title">Business Summary</div>
   <p class="{{ 'missing' if business_summary == missing_text else '' }}">{{ business_summary }}</p>

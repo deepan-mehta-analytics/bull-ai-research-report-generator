@@ -22,6 +22,8 @@
     <form method="post" action="/generate" enctype="multipart/form-data">
       <label for="company_name">Company name</label>
       <input type="text" id="company_name" name="company_name" required>
+      <label for="ticker">Stock ticker (optional)</label>
+      <input type="text" id="ticker" name="ticker" placeholder="e.g. JSWENERGY.NS — leave blank to auto-match">
       <label for="file">Context document (PDF, CSV, or TXT)</label>
       <input type="file" id="file" name="file" accept=".pdf,.csv,.txt" required>
       <button type="submit">Generate report</button>
