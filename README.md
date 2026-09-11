@@ -25,7 +25,7 @@ analyst-style report out — at MVP scope.
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Anthropic Claude](https://img.shields.io/badge/Anthropic-Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/)
 [![Tests](https://img.shields.io/badge/Tests-31_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
-[![Status](https://img.shields.io/badge/Status-In_Development-yellow?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
+[![Status](https://img.shields.io/badge/Status-Complete-brightgreen?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 
 ---
 
@@ -259,7 +259,11 @@ Anthropic API from real financial documents:
 - At most 4 charts per report — extraction can surface many more series than fit the layout, so the
   first 4 (in the order the model returns them) are kept and the rest are dropped.
 - Wide tables shrink rather than paginate: when a document supplies more than ~6 distinct period
-  labels, the financial tables step down to a denser type size to stay inside the page margins.
+  labels, the financial tables step down to a denser type size to stay inside the page margins. At
+  that density, a very tall row (many wrapped "Not available in source document" cells) can still
+  split across a PDF page boundary, detaching the row's label from part of its data visually — no
+  data is lost or misordered, but it's a known cosmetic gap (`tr { page-break-inside: avoid }`
+  would fix it).
 - No async job queue — the request/response is synchronous, so large documents or slow API
   responses block the request.
 - A broad `except Exception` around the pipeline swallows tracebacks server-side with no logging
