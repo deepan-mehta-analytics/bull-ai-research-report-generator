@@ -279,6 +279,11 @@ Anthropic API from real financial documents:
 Both examples were regenerated with a real ticker (`JSWENERGY.NS`, `ICICIBANK.NS`) and show a
 populated Live Market Data section sourced independently from Yahoo Finance.
 
+Both examples' extracted financial figures were also independently cross-checked against real,
+public news coverage of the same companies' same quarters — see
+[`docs/verification/2026-09-11-example-data-cross-check.md`](docs/verification/2026-09-11-example-data-cross-check.md)
+for the full due-diligence trail, sources, and one deliberately-kept-visible methodology note.
+
 ---
 
 ## ⚠️ Known Limitations
