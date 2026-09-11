@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))  # add project root to imp
 
 from app.ingestion.loaders import load_document  # import the document-to-text loader (pdf/csv/txt dispatch)
 from app.extraction.extractor import extract_report_data  # import the Claude-backed extraction call
-from app.charts.chart_builder import build_charts  # import the chart-series-to-PNG renderer
+from app.charts.chart_builder import build_charts, MAX_CHART_SERIES  # import the chart-series-to-PNG renderer and the shared chart-count cap
 from app.mapping.mapper import map_to_template_context  # import the ReportData-to-template-context mapper
 from app.render.renderer import render_pdf  # import the context-to-PDF-bytes renderer
 
@@ -41,6 +41,7 @@ def generate_one(company_name: str, source_path: Path, output_filename: str) -> 
     if not report_data.chart_series:  # guard: skip if extraction produced no chartable series
         print(f"  WARNING: no chart series extracted for {company_name}, skipping.")  # explain why this document was skipped
         return  # stop processing this document early
+    report_data.chart_series = report_data.chart_series[:MAX_CHART_SERIES]  # apply the same chart cap the FastAPI route uses, so examples match served output
     chart_images = build_charts(report_data.chart_series)  # render each chart series into a base64 PNG data URI
     context = map_to_template_context(report_data, chart_images)  # map ReportData + chart images into the template's context dict
     pdf_bytes = render_pdf(context)  # render the Jinja2 template and convert it to PDF bytes via WeasyPrint

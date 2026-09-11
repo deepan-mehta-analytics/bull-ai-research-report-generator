@@ -24,7 +24,7 @@ analyst-style report out — at MVP scope.
 [![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Anthropic Claude](https://img.shields.io/badge/Anthropic-Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/)
-[![Tests](https://img.shields.io/badge/Tests-21_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
+[![Tests](https://img.shields.io/badge/Tests-31_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 [![Status](https://img.shields.io/badge/Status-In_Development-yellow?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 
 ---
@@ -158,7 +158,7 @@ bull-ai-research-report-generator/
 │       └── ADR-0004-full-template-fidelity.md  ← template fidelity + missing-field policy
 │
 ├── examples/
-│   ├── eternal_ltd_report.pdf           ← sample report: fully populated fields path
+│   ├── jsw_energy_report.pdf            ← sample report: fully populated fields path
 │   └── icici_bank_report.pdf            ← sample report: graceful-degradation path
 │
 ├── scripts/
@@ -221,7 +221,7 @@ Tests run automatically on every push/PR via GitHub Actions — see
 pytest
 ```
 
-**21 passed**, 0 failed (verified against `main`, with `WEASYPRINT_DLL_DIRECTORY` set on Windows).
+**31 passed**, 0 failed (verified against `main`, with `WEASYPRINT_DLL_DIRECTORY` set on Windows).
 The suite is fully mocked against the Anthropic API — no network access or API key is required to
 run it. CI (`.github/workflows/tests.yml`) runs the same suite on every push/PR.
 
@@ -243,8 +243,8 @@ This project has no benchmark metrics — it isn't an ML model, so there's no ac
 to report. What does exist is two real example reports in `examples/`, generated against the real
 Anthropic API from real financial documents:
 
-- `eternal_ltd_report.pdf` — demonstrates the **populated-fields path**: a full financial table
-  with YoY/QoQ figures and charts.
+- `jsw_energy_report.pdf` — demonstrates the **populated-fields path**: a power company's own
+  quarterly results deck yields a full financial table with period columns, YoY figures, and charts.
 - `icici_bank_report.pdf` — demonstrates the **graceful-degradation path**: the source document
   doesn't support every field, so those cells show "Not available in source document" instead of
   being fabricated.
@@ -256,6 +256,10 @@ Anthropic API from real financial documents:
 - No authentication or rate limiting on `/generate`.
 - Single-document-per-request only — no batch processing.
 - Bar charts only; no dual-axis value + growth charts.
+- At most 4 charts per report — extraction can surface many more series than fit the layout, so the
+  first 4 (in the order the model returns them) are kept and the rest are dropped.
+- Wide tables shrink rather than paginate: when a document supplies more than ~6 distinct period
+  labels, the financial tables step down to a denser type size to stay inside the page margins.
 - No async job queue — the request/response is synchronous, so large documents or slow API
   responses block the request.
 - A broad `except Exception` around the pipeline swallows tracebacks server-side with no logging

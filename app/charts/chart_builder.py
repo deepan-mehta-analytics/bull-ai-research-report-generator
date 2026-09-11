@@ -15,6 +15,8 @@ from ..extraction.schema import ChartSeries  # import data model for chart serie
 
 BAR_COLOR = "#0f7a6c"  # hex color for all bar chart columns
 
+MAX_CHART_SERIES = 4  # upper bound on charts per report; extraction has returned 17 series for one document, which overflows the layout by pages
+
 
 def _render_single_chart(series: ChartSeries) -> str | None:  # render one series as a bar chart, or None if it isn't plottable
     """Draw one series as a bar chart and return it as a base64 data URI,

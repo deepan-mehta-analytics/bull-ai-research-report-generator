@@ -13,6 +13,16 @@
   table.data-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
   table.data-table th, table.data-table td { border: 1px solid #cccccc; padding: 4px 6px; font-size: 9pt; text-align: left; }
   table.data-table th { background-color: #e6f2f0; }
+  /* A union of every row's periods can run to a dozen-plus columns, which auto
+     layout pushes past the page edge. Fixed layout keeps the financial tables
+     inside the printable width and wraps long cell text instead of clipping it. */
+  table.financials { table-layout: fixed; }
+  table.financials th, table.financials td { font-size: 8pt; padding: 3px 4px; overflow-wrap: break-word; }
+  table.financials th:first-child, table.financials td:first-child { width: 16%; }
+  /* Beyond ~6 period columns the cells get too narrow for a figure to fit on one
+     line, so step the type down rather than let numbers break mid-token. */
+  table.financials.dense th, table.financials.dense td { font-size: 6pt; padding: 2px 2px; }
+  table.financials.dense th:first-child, table.financials.dense td:first-child { width: 14%; font-size: 7pt; }
   .missing { color: #999999; font-style: italic; }
   ul.highlights { margin: 6px 0; padding-left: 18px; }
   ul.highlights li { margin-bottom: 3px; font-size: 9.5pt; }
@@ -52,7 +62,7 @@
   <p class="{{ 'missing' if outlook == missing_text else '' }}">{{ outlook }}</p>
 
   <div class="section-title">Quarterly Financials</div>
-  <table class="data-table">
+  <table class="data-table financials{{ ' dense' if financial_period_labels|length > 6 else '' }}">
     <tr>
       <th>Metric</th>
       {% for label in financial_period_labels %}
@@ -91,7 +101,7 @@
   <div class="page-break"></div>
 
   <div class="section-title">Full Financials</div>
-  <table class="data-table">
+  <table class="data-table financials{{ ' dense' if full_financials_period_labels|length > 6 else '' }}">
     <tr>
       <th>Metric</th>
       {% for label in full_financials_period_labels %}

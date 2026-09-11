@@ -8,14 +8,12 @@ from jinja2 import Environment, FileSystemLoader  # Jinja2 environment and files
 
 from .ingestion.loaders import load_document  # Task 3: turn uploaded file bytes into plain text
 from .extraction.extractor import extract_report_data  # Task 4: turn document text into a validated ReportData
-from .charts.chart_builder import build_charts  # Task 6: turn chart series into base64 PNG data URIs
+from .charts.chart_builder import build_charts, MAX_CHART_SERIES  # Task 6: turn chart series into base64 PNG data URIs, plus the shared chart-count cap
 from .mapping.mapper import map_to_template_context  # Task 5: turn ReportData + chart images into a template context dict
 from .render.renderer import render_pdf  # Task 7: turn a template context dict into PDF bytes
 
 FORM_TEMPLATES_DIR = Path(__file__).parent / "render" / "templates"  # absolute path to the shared templates directory
 _form_environment = Environment(loader=FileSystemLoader(str(FORM_TEMPLATES_DIR)), autoescape=True)  # Jinja2 environment scoped to that directory with HTML autoescaping on
-
-MAX_CHART_SERIES = 4  # upper bound on charts per report; extraction can otherwise return a dozen-plus series and overflow the layout
 
 app = FastAPI(title="Bull AI Research Report Generator")  # the FastAPI application instance uvicorn serves
 
