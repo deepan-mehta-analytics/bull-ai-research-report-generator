@@ -55,20 +55,22 @@
   <table class="data-table">
     <tr>
       <th>Metric</th>
-      {% if financial_table_rows %}
-      {% for label in financial_table_rows[0].period_labels %}
+      {% for label in financial_period_labels %}
       <th>{{ label }}</th>
       {% endfor %}
-      {% endif %}
       <th>YoY Growth</th>
       <th>QoQ Growth</th>
     </tr>
     {% for row in financial_table_rows %}
     <tr>
       <td>{{ row.metric_label }}</td>
+      {% if row['values']|length == 1 and financial_period_labels|length > 1 %}
+      <td class="{{ 'missing' if row['values'][0] == missing_text else '' }}" colspan="{{ financial_period_labels|length }}">{{ row['values'][0] }}</td>
+      {% else %}
       {% for value in row['values'] %}
       <td class="{{ 'missing' if value == missing_text else '' }}">{{ value }}</td>
       {% endfor %}
+      {% endif %}
       <td class="{{ 'missing' if row.yoy_growth == missing_text else '' }}">{{ row.yoy_growth }}</td>
       <td class="{{ 'missing' if row.qoq_growth == missing_text else '' }}">{{ row.qoq_growth }}</td>
     </tr>
@@ -77,9 +79,13 @@
 
   <div class="section-title">Charts</div>
   <div class="charts-grid">
+    {% if charts %}
     {% for chart in charts %}
     <div class="chart-cell"><img src="{{ chart }}" alt="chart"></div>
     {% endfor %}
+    {% else %}
+    <p class="missing">{{ missing_text }}</p>
+    {% endif %}
   </div>
 
   <div class="page-break"></div>
@@ -88,18 +94,20 @@
   <table class="data-table">
     <tr>
       <th>Metric</th>
-      {% if full_financials_rows %}
-      {% for label in full_financials_rows[0].period_labels %}
+      {% for label in full_financials_period_labels %}
       <th>{{ label }}</th>
       {% endfor %}
-      {% endif %}
     </tr>
     {% for row in full_financials_rows %}
     <tr>
       <td>{{ row.metric_label }}</td>
+      {% if row['values']|length == 1 and full_financials_period_labels|length > 1 %}
+      <td class="{{ 'missing' if row['values'][0] == missing_text else '' }}" colspan="{{ full_financials_period_labels|length }}">{{ row['values'][0] }}</td>
+      {% else %}
       {% for value in row['values'] %}
       <td class="{{ 'missing' if value == missing_text else '' }}">{{ value }}</td>
       {% endfor %}
+      {% endif %}
     </tr>
     {% endfor %}
   </table>

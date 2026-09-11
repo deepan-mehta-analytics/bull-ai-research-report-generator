@@ -20,13 +20,23 @@ class CompanyData(BaseModel):  # scalar header and data-box fields from document
     market_cap: Optional[str] = None  # market capitalization as text, rarely present
 
 
+class PeriodValue(BaseModel):  # one period label paired with its reported value
+    """One (period label, value) pair from a financial table row. Modelled as
+    a closed object rather than an open-ended dict because structured output
+    cannot express arbitrary dynamic keys, which silently yielded empty
+    period data for every row."""
+
+    period_label: str  # the exact period label as it appears in the source (e.g. "Q1FY26", "FY25")
+    value: Optional[str] = None  # the reported value for that period, or None if not stated
+
+
 class FinancialRow(BaseModel):  # single row in a financial metrics table
-    """One row of a financial table - period_values keys are period labels
-    (e.g. "Q1FY26") exactly as the source document labels them, since
-    different sectors report on different calendars and cadences."""
+    """One row of a financial table - each PeriodValue's period_label is the
+    period name (e.g. "Q1FY26") exactly as the source document labels it,
+    since different sectors report on different calendars and cadences."""
 
     metric_label: str  # row header label (e.g., "Revenue", "Net Profit"), always present
-    period_values: dict[str, Optional[str]] = Field(default_factory=dict)  # period labels to values (Q1/Q2/etc), empty if not extracted
+    period_values: list[PeriodValue] = Field(default_factory=list)  # ordered period/value pairs for this row, empty if not extracted
     yoy_growth: Optional[str] = None  # year-over-year growth percentage as text, None if absent
     qoq_growth: Optional[str] = None  # quarter-over-quarter growth percentage as text, None if absent
 

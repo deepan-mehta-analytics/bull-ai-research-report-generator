@@ -12,7 +12,7 @@ Rules:
 - Every field you cannot support directly from the document text must be left as null (for scalars) or an empty list (for lists). Never invent, estimate, or guess a number, a rating, a target price, or a narrative claim that is not traceable to the document.
 - highlights: pull the document's own key bullet points/highlights.
 - outlook: synthesize a short narrative from the document's own forward-looking statements, if present - do not add investment advice.
-- financial_table_rows: the document's headline period-over-period metrics (e.g. Sales/EBITDA/PAT for a company, or NII/NIM/deposits for a bank), with period_values keyed by whatever period labels the document uses.
+- financial_table_rows: the document's headline period-over-period metrics (e.g. Sales/EBITDA/PAT for a company, or NII/NIM/deposits for a bank). Fill period_values with one entry per reported period, where period_label is whatever period name the document itself uses (e.g. "Q2FY26", "FY25") and value is the figure as printed. Always populate this - a financial table row with no period_values is useless.
 - full_financials: any additional financial-statement-style rows the document supports beyond the headline table (balance sheet, cashflow, ratios) - can be empty if the document doesn't go that deep.
 - chart_series: one entry per numerical time series worth charting (e.g. revenue by quarter). Produce at least one if the document contains any quarter-over-quarter or year-over-year figures at all.
 - historical_ratings: almost always empty for an arbitrary company document - only populate if the document itself states a rating history, which is rare.
