@@ -2,10 +2,8 @@
 
 ## Summary
 
-Built per `docs/superpowers/specs/2026-09-10-research-report-generator-design.md`. This document
-rolls up the architecture decisions (full ADRs in `docs/decisions/`) and records what was
-deliberately left out of scope, per the assessment's own "minimal web app" framing and this
-project's line-by-line PRD compliance pass (spec Appendix B).
+This document rolls up the architecture decisions (full ADRs in `docs/decisions/`) and records
+what was deliberately left out of scope, per the assessment's own "minimal web app" framing.
 
 ## Decision log
 
