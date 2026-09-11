@@ -24,6 +24,11 @@ what was deliberately left out of scope, per the assessment's own "minimal web a
   Price/Market Cap/Sector are filled from live Yahoo Finance data, never merged with
   document-extracted content, never guessed on an ambiguous ticker match, and never able to block
   or break the core report if the lookup fails.
+- **ADR-0006 — Dual-axis growth-line charts, a deliberate dataviz exception.** Growth is computed
+  arithmetically from already-extracted chart values (never requested from Claude), gated by a
+  whole-series period-format guard that falls back to a plain bar when categories mix formats.
+  Dual-axis rendering itself is a documented exception to general dataviz best practice, chosen to
+  match the reference sample's own chart convention per ADR-0004's fidelity mandate.
 
 ## Alignment with Bull AI's own product
 
@@ -49,8 +54,6 @@ Considered during design, deliberately not built (see spec Section 8):
 - A vector-store/RAG layer for cross-report comparison (e.g. tracking guidance vs. actuals across
   a company's own report history — directly analogous to Bull AI's own "Guidance vs. Actuals"
   feature)
-- Dual-axis bar+line charts (value + growth %) matching the sample's exact chart style, instead of
-  v1's bar-only charts
 - **Provider-agnostic LLM extraction.** Considered supporting any LLM provider's API key, not just
   Anthropic's. Descoped: Anthropic's `output_format=ReportData` (available on both
   `client.messages.parse()` and the streaming `client.messages.stream()` the extractor now uses) is

@@ -24,7 +24,7 @@ analyst-style report out — at MVP scope.
 [![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Anthropic Claude](https://img.shields.io/badge/Anthropic-Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/)
-[![Tests](https://img.shields.io/badge/Tests-73_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
+[![Tests](https://img.shields.io/badge/Tests-84_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 [![Status](https://img.shields.io/badge/Status-Complete-brightgreen?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 [![Live Market Data](https://img.shields.io/badge/Live_Data-Yahoo_Finance-orange?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 
@@ -55,9 +55,11 @@ It implements:
   independent, clearly-labeled source — never merged with document-extracted content, never
   guessed, and never able to block or break the underlying report if the lookup fails
   (`app/market_data/`, see ADR-0005).
-- **Matplotlib chart rendering** — chart series from the extracted data are rendered as bar charts
-  and embedded directly in the PDF as base64 PNG data URIs, with no external image hosting
-  (`app/charts/chart_builder.py`).
+- **Matplotlib dual-axis chart rendering** — chart series from the extracted data are rendered as
+  bar charts, with a growth-% line overlay computed arithmetically from the already-extracted values
+  (never requested from Claude) when a series' periods share one consistent format, and embedded
+  directly in the PDF as base64 PNG data URIs, with no external image hosting
+  (`app/charts/chart_builder.py`, see ADR-0006).
 - **Jinja2 + WeasyPrint PDF rendering** — the mapped context is rendered to HTML and converted to a
   paginated PDF without a headless browser (`app/render/`).
 - **Reproducible sample generation** — `scripts/generate_samples.py` is a CLI that regenerates
@@ -241,7 +243,7 @@ Tests run automatically on every push/PR via GitHub Actions — see
 pytest
 ```
 
-**73 passed**, 0 failed (verified against `main`, with `WEASYPRINT_DLL_DIRECTORY` set on Windows).
+**84 passed**, 0 failed (verified against `main`, with `WEASYPRINT_DLL_DIRECTORY` set on Windows).
 The suite is fully mocked against the Anthropic API and against Yahoo Finance (`yfinance`) — no
 network access or API key is required to run it. CI (`.github/workflows/tests.yml`) runs the same
 suite on every push/PR.
@@ -282,7 +284,18 @@ populated Live Market Data section sourced independently from Yahoo Finance.
 
 - No authentication or rate limiting on `/generate`.
 - Single-document-per-request only — no batch processing.
-- Bar charts only; no dual-axis value + growth charts.
+- The growth-line overlay only renders when a chart's category labels all share one consistent
+  period format (all-quarter, all-half-year, or all-year); a series mixing formats falls back to a
+  plain bar with no growth line, by design — confirmed real on this project's own JSW Energy example.
+- Growth is computed as plain index-adjacent arithmetic on already-extracted values, not verified
+  against true chronological adjacency — a series whose consecutive categories skip periods
+  (confirmed real on the ICICI example) still shows a real, arithmetically-correct growth number for
+  that step, just not a clean "one period later" comparison.
+- Dual-axis (two independently-scaled y-axes) is a deliberate exception to general dataviz best
+  practice, made for sample-fidelity and domain-convention reasons — see ADR-0006.
+- At most 3 distinct bar colors are used even though up to 4 charts can render per report; a 4th
+  chart's bar color repeats the 1st chart's — each chart's own title remains the real identity
+  channel. See ADR-0006.
 - At most 4 charts per report — extraction can surface many more series than fit the layout, so the
   first 4 (in the order the model returns them) are kept and the rest are dropped.
 - Wide tables shrink rather than paginate: when a document supplies more than ~6 distinct period
@@ -305,16 +318,11 @@ populated Live Market Data section sourced independently from Yahoo Finance.
 - The two committed example PDFs show live market data as of their generation time, which will look
   "stale" against the real market within days — inherent to what "live" means, made explicit by the
   caption's own timestamp.
-- Charts remain v1 bar-only, single-color, single-axis — not enhanced in this release due to the
-  submission deadline. See Roadmap.
 
 ---
 
 ## 🔜 Roadmap
 
-- Richer charts: dual-axis value+growth-% overlays (wiring the already-extracted `yoy_growth`/
-  `qoq_growth` data into visuals), per-series color, value labels — explicitly deferred this release
-  to prioritize live market-data enrichment within the deadline.
 - React/Vite frontend with drag-and-drop upload
 - Async job queue with live pipeline-stage progress (Reading → Extracting → Charting → Rendering)
 - Post-generation on-screen metrics/highlights preview before download
