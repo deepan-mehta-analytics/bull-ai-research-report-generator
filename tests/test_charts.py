@@ -1,6 +1,6 @@
 """Test suite for chart builder module - validates matplotlib rendering to base64 data URIs."""
 from app.extraction.schema import ChartSeries  # import ChartSeries model for test data
-from app.charts.chart_builder import build_charts, _period_format, _all_same_format  # import the functions under test
+from app.charts.chart_builder import build_charts, _period_format, _all_same_format, _compute_growth  # import the functions under test
 
 
 def test_build_charts_returns_one_image_per_series():  # test that one image is produced per input series
@@ -68,3 +68,20 @@ def test_all_same_format_false_when_any_label_unrecognized():  # test one bad la
     """A single unrecognized label anywhere in the series fails the whole
     guard - never compute growth around an unrecognized point."""
     assert _all_same_format(["Q1-2025", "Q2-2025", "Sep 30, 2025"]) is False  # last entry doesn't match any known pattern
+
+
+def test_compute_growth_basic_sequence():  # test straightforward period-over-period growth
+    """Growth is index-adjacent percentage change; the first point always
+    has no prior point to compare against."""
+    assert _compute_growth([100.0, 120.0, 90.0]) == [None, 20.0, -25.0]  # +20% then -25%, first entry always None
+
+
+def test_compute_growth_guards_division_by_zero():  # test a zero prior value never raises or returns inf/nan
+    """A zero prior value makes growth undefined - return None for that
+    step, never inf/nan, never raise."""
+    assert _compute_growth([0.0, 50.0]) == [None, None]  # first entry always None; second entry None because previous value is 0
+
+
+def test_compute_growth_single_value():  # test the smallest possible input
+    """A single-point series has no growth to compute at all."""
+    assert _compute_growth([42.0]) == [None]  # only one point, no prior point exists

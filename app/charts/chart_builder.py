@@ -47,6 +47,20 @@ def _all_same_format(categories: list[str]) -> bool:  # whole-series guard: ever
     return len(formats) == 1 and None not in formats  # exactly one format, and it's a recognized one
 
 
+def _compute_growth(values: list[float]) -> list[float | None]:  # index-adjacent % growth, aligned to `values`
+    """Period-over-period growth as a percentage, aligned 1:1 with `values`.
+    growth[0] is always None (no prior point). growth[i] is None when the
+    prior value is zero (undefined growth) rather than raising or
+    returning inf/nan - consistent with this module's "skip rather than
+    raise" pattern. Caller is responsible for calling this ONLY when
+    `_all_same_format` is True; this function does not re-check format, it
+    only guards against division by zero."""
+    growth: list[float | None] = [None]  # first point has no prior point to compare against
+    for previous, current in zip(values, values[1:]):  # pair each value with its immediate predecessor
+        growth.append(None if previous == 0 else (current - previous) / previous * 100)  # None on div-by-zero, else % change
+    return growth
+
+
 def _render_single_chart(series: ChartSeries) -> str | None:  # render one series as a bar chart, or None if it isn't plottable
     """Draw one series as a bar chart and return it as a base64 data URI,
     or None when the series has no usable data. Categories and values are
