@@ -83,3 +83,74 @@ def test_generate_report_with_no_chart_data_shows_error(monkeypatch):  # verify 
 
     assert response.status_code == 400  # expect a client error status
     assert "trend data" in response.text  # expect the inline error message to mention trend data
+
+
+def test_generate_report_accepts_optional_ticker_field(monkeypatch):  # test the new form field is accepted and used
+    """The new ticker field is optional and, when provided, is passed
+    through to get_market_data."""
+    fake_report = ReportData(  # minimal valid ReportData with chart data present
+        company_name="Test Co",
+        chart_series=[ChartSeries(label="Revenue", categories=["Q1"], values=[100.0])],
+    )
+    monkeypatch.setattr(main_module, "extract_report_data", lambda text, name: fake_report)  # stub out the Claude-backed extraction call
+    captured_args = []  # accumulator recording what get_market_data was called with
+    monkeypatch.setattr(  # replace get_market_data with a spy that records its arguments
+        main_module, "get_market_data",
+        lambda company_name, ticker: captured_args.append((company_name, ticker)) or main_module.MarketDataResult(found=False),
+    )
+
+    response = client.post(  # submit the generate form with a ticker value
+        "/generate",
+        data={"company_name": "Test Co", "ticker": "JSWENERGY.NS"},  # includes the new field
+        files={"file": ("notes.txt", b"Revenue grew 10 percent.", "text/plain")},
+    )
+
+    assert response.status_code == 200  # pipeline still succeeds
+    assert captured_args == [("Test Co", "JSWENERGY.NS")]  # the typed ticker reached get_market_data unchanged
+
+
+def test_generate_report_without_ticker_field_still_works(monkeypatch):  # test the pre-existing 2-field form submission (no ticker) still works
+    """Every pre-existing caller of this route omits the ticker field
+    entirely - the route must still work exactly as before."""
+    fake_report = ReportData(  # minimal valid ReportData with chart data present
+        company_name="Test Co",
+        chart_series=[ChartSeries(label="Revenue", categories=["Q1"], values=[100.0])],
+    )
+    monkeypatch.setattr(main_module, "extract_report_data", lambda text, name: fake_report)  # stub out the Claude-backed extraction call
+    monkeypatch.setattr(main_module, "get_market_data", lambda company_name, ticker: main_module.MarketDataResult(found=False))  # stub the new market-data step
+
+    response = client.post(  # submit the generate form WITHOUT a ticker field, exactly as every pre-existing test does
+        "/generate",
+        data={"company_name": "Test Co"},
+        files={"file": ("notes.txt", b"Revenue grew 10 percent.", "text/plain")},
+    )
+
+    assert response.status_code == 200  # still succeeds with the default empty ticker
+
+
+def test_generate_report_survives_market_data_failure(monkeypatch):  # THE end-to-end test proving the core report is never broken by a market-data failure, even if get_market_data's own never-raise contract is somehow violated
+    """get_market_data is contracted to never raise (Task 3's own tests
+    prove this for every real failure mode). This test simulates the
+    contract being violated anyway, to prove main.py's OWN local
+    try/except (added in Step 3 below) is real defense-in-depth, not
+    just a restated assumption - the report must still generate
+    successfully even in this worst case, because that's what
+    constraint #1 actually requires: unconditional, not
+    every-case-we-thought-of."""
+    fake_report = ReportData(  # minimal valid ReportData with chart data present
+        company_name="Test Co",
+        chart_series=[ChartSeries(label="Revenue", categories=["Q1"], values=[100.0])],
+    )
+    monkeypatch.setattr(main_module, "extract_report_data", lambda text, name: fake_report)  # stub out the Claude-backed extraction call
+    def _raise(*args, **kwargs):  # simulates get_market_data somehow raising, despite its own contract never to
+        raise RuntimeError("simulated total market-data failure")
+    monkeypatch.setattr(main_module, "get_market_data", _raise)  # force the worst-case failure mode
+
+    response = client.post(  # submit the generate form normally
+        "/generate",
+        data={"company_name": "Test Co"},
+        files={"file": ("notes.txt", b"Revenue grew 10 percent.", "text/plain")},
+    )
+
+    assert response.status_code == 200  # the report still generates - main.py's own local defense-in-depth caught the simulated failure
+    assert response.headers["content-type"] == "application/pdf"  # a real, working PDF, not a degraded response

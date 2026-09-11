@@ -11,6 +11,8 @@ from .extraction.extractor import extract_report_data  # Task 4: turn document t
 from .charts.chart_builder import build_charts, MAX_CHART_SERIES  # Task 6: turn chart series into base64 PNG data URIs, plus the shared chart-count cap
 from .mapping.mapper import map_to_template_context  # Task 5: turn ReportData + chart images into a template context dict
 from .render.renderer import render_pdf  # Task 7: turn a template context dict into PDF bytes
+from .market_data.lookup import get_market_data  # best-effort live market-data lookup
+from .market_data.schema import MarketDataResult  # used both by the local try/except below and by tests via main_module.MarketDataResult
 
 FORM_TEMPLATES_DIR = Path(__file__).parent / "render" / "templates"  # absolute path to the shared templates directory
 _form_environment = Environment(loader=FileSystemLoader(str(FORM_TEMPLATES_DIR)), autoescape=True)  # Jinja2 environment scoped to that directory with HTML autoescaping on
@@ -38,7 +40,7 @@ def show_form():  # handler for the root page
 
 
 @app.post("/generate")  # register POST /generate to accept the form submission
-def generate_report(company_name: str = Form(...), file: UploadFile = File(...)):  # plain def so FastAPI runs this blocking pipeline in its threadpool, not on the event loop
+def generate_report(company_name: str = Form(...), ticker: str = Form(""), file: UploadFile = File(...)):  # plain def so FastAPI runs this blocking pipeline in its threadpool, not on the event loop; new optional ticker field defaults to empty string, not Form(...)
     """Run the full pipeline and return the PDF, or re-render the form
     with an inline error on any failure."""
     file_bytes = file.file.read()  # read the full uploaded file into memory via the synchronous underlying file object
@@ -51,10 +53,14 @@ def generate_report(company_name: str = Form(...), file: UploadFile = File(...))
                 "Try a document with quarter-over-quarter or year-over-year figures."
             )
         report_data.chart_series = report_data.chart_series[:MAX_CHART_SERIES]  # cap the chart count; Claude returns series in its own relevance order, so the first N are the highest-value ones
+        try:  # get_market_data is contracted to never raise (see its own tests), but this local wrap is a second, unconditional layer of defense-in-depth: the pipeline's core report must never depend on that contract holding forever, only on it holding for THIS call
+            market_data = get_market_data(company_name, ticker)  # best-effort live market-data lookup
+        except Exception:  # a genuine contract violation - degrade rather than fail the whole report
+            market_data = MarketDataResult(found=False)  # same "not available" outcome as every other market-data failure mode
         chart_images = build_charts(report_data.chart_series)  # render each chart series to a base64 PNG data URI
-        context = map_to_template_context(report_data, chart_images)  # build the missing-field-safe template context
+        context = map_to_template_context(report_data, chart_images, market_data)  # build the missing-field-safe template context
         pdf_bytes = render_pdf(context)  # render the context to PDF bytes
-    except Exception as exc:  # catch any pipeline failure (bad file type, extraction error, missing chart data, etc.)
+    except Exception as exc:  # catch any pipeline failure (bad file type, extraction error, missing chart data, market-data failure if it somehow raises, etc.)
         return HTMLResponse(content=_render_form(error=str(exc)), status_code=400)  # re-show the form with the error message and a 400 status
 
     filename = _safe_filename(company_name)  # sanitize the company name for the download filename
