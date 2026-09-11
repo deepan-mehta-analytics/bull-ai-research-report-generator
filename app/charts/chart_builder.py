@@ -17,6 +17,35 @@ BAR_COLOR = "#0f7a6c"  # hex color for all bar chart columns
 
 MAX_CHART_SERIES = 4  # upper bound on charts per report; extraction has returned 17 series for one document, which overflows the layout by pages
 
+import re  # standard library, for the period-format classification below
+
+_QUARTER_RE = re.compile(r"\bQ\d", re.IGNORECASE)  # matches "Q1", "Q2-2025", "Q2 FY26", "Q2FY26" - no trailing \b since "1" and "F" in "Q2FY26" share no word boundary
+_HALF_RE = re.compile(r"\bH\d", re.IGNORECASE)  # matches "H1", "H1 FY25", "H1FY26" - same trailing-boundary fix as _QUARTER_RE
+_YEAR_RE = re.compile(r"\bFY\d{2,4}\b", re.IGNORECASE)  # matches "FY2025", "FY25" (checked only if Q/H didn't already match)
+
+
+def _period_format(label: str) -> str | None:  # classify one category label's period type, or None if unrecognized
+    """Classify a category label's period granularity. Order matters: a
+    label like "Q2 FY26" must classify as "quarter", not "year", so the
+    quarter/half checks run before the bare-year check."""
+    if _QUARTER_RE.search(label):  # check quarter pattern first - it can co-occur with an FY token
+        return "quarter"  # e.g. "Q2-2025", "Q2 FY26"
+    if _HALF_RE.search(label):  # then half-year pattern, same reasoning
+        return "half"  # e.g. "H1 FY25"
+    if _YEAR_RE.search(label):  # only a bare "FY####" with no Q/H prefix
+        return "year"  # e.g. "FY2025"
+    return None  # unrecognized format - never guess, this excludes the whole series from growth (see _all_same_format)
+
+
+def _all_same_format(categories: list[str]) -> bool:  # whole-series guard: every label must share one period type
+    """True only if every category in the series classifies to the SAME
+    non-None period format. A mixed series (e.g. JSW Energy's real
+    Q2 FY25/Q2 FY26/H1 FY25/H1 FY26) or any unrecognized label returns
+    False, which skips the growth line for the whole series - safer than
+    guessing at partial/per-pair validity."""
+    formats = {_period_format(label) for label in categories}  # set of distinct classifications across the series
+    return len(formats) == 1 and None not in formats  # exactly one format, and it's a recognized one
+
 
 def _render_single_chart(series: ChartSeries) -> str | None:  # render one series as a bar chart, or None if it isn't plottable
     """Draw one series as a bar chart and return it as a base64 data URI,

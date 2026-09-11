@@ -1,6 +1,6 @@
 """Test suite for chart builder module - validates matplotlib rendering to base64 data URIs."""
 from app.extraction.schema import ChartSeries  # import ChartSeries model for test data
-from app.charts.chart_builder import build_charts  # import the chart builder function under test
+from app.charts.chart_builder import build_charts, _period_format, _all_same_format  # import the functions under test
 
 
 def test_build_charts_returns_one_image_per_series():  # test that one image is produced per input series
@@ -38,3 +38,33 @@ def test_build_charts_skips_series_with_no_usable_data():  # test the empty-seri
     ]
     images = build_charts(series)  # call build_charts with the mixed list
     assert len(images) == 1  # only the plottable series produces an image
+
+
+def test_period_format_classifies_known_patterns():  # test each real label shape seen in this project's own example PDFs
+    """Verify quarter/half/year labels classify correctly, and an
+    unrecognized shape (e.g. a plain calendar date) returns None rather
+    than guessing."""
+    assert _period_format("Q2-2025") == "quarter"  # real ICICI category label
+    assert _period_format("Q2 FY26") == "quarter"  # real JSW Energy category label
+    assert _period_format("H1FY26") == "half"  # real JSW Energy category label, no space
+    assert _period_format("H1 FY25") == "half"  # real JSW Energy category label, with space
+    assert _period_format("FY2025") == "year"  # bare fiscal-year label, no quarter/half prefix
+    assert _period_format("Sep 30, 2025") is None  # unrecognized calendar-date shape - never guessed
+
+
+def test_all_same_format_true_for_uniform_series():  # test the whole-series guard passes on a clean series
+    """A series where every category is the same recognized period type
+    passes the guard."""
+    assert _all_same_format(["Q2-2025", "Q1-2026", "Q2-2026"]) is True  # real ICICI category set, all quarters
+
+
+def test_all_same_format_false_for_mixed_real_series():  # test the guard correctly rejects JSW Energy's real mixed series
+    """JSW Energy's real chart categories mix quarters and half-years in
+    one series - this must fail the guard, not partially pass."""
+    assert _all_same_format(["Q2 FY25", "Q2 FY26", "H1 FY25", "H1 FY26"]) is False  # real JSW Energy category set
+
+
+def test_all_same_format_false_when_any_label_unrecognized():  # test one bad label poisons the whole series, never a partial guess
+    """A single unrecognized label anywhere in the series fails the whole
+    guard - never compute growth around an unrecognized point."""
+    assert _all_same_format(["Q1-2025", "Q2-2025", "Sep 30, 2025"]) is False  # last entry doesn't match any known pattern
