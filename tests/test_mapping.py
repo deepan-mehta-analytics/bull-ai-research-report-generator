@@ -1,6 +1,7 @@
 """Test suite for field mapping module - validates null-safety and field rendering."""
 from app.extraction.schema import ReportData, CompanyData, FinancialRow, PeriodValue  # import schema models for testing
-from app.mapping.mapper import map_to_template_context, MISSING_TEXT  # import mapper function and constant
+from app.mapping.mapper import map_to_template_context, MISSING_TEXT, MARKET_DATA_MISSING_TEXT  # import mapper function and constants
+from app.market_data.schema import MarketDataResult  # market-data result model for the new tests below
 
 
 def test_missing_company_data_field_marked_clearly():  # test that missing company fields render MISSING_TEXT
@@ -86,3 +87,85 @@ def test_charts_and_company_name_pass_through():  # test that charts and company
     context = map_to_template_context(data, chart_images=["data:image/png;base64,abc"])  # call mapper with sample chart
     assert context["company_name"] == "Example Corp"  # verify company_name is unchanged
     assert context["charts"] == ["data:image/png;base64,abc"]  # verify charts list is unchanged
+
+
+def test_market_data_missing_text_is_distinct_from_document_missing_text():  # THE regression test for the rendering contradiction bug found during spec review
+    """Regression test for a real bug found during the spec's rendering
+    pre-mortem: if these two constants were ever collapsed back into one
+    (e.g. by someone "simplifying" the code later), a field inside a
+    section explicitly captioned "not from the uploaded document" would
+    literally say "Not available in source document" - a direct,
+    reader-visible contradiction. This assertion is the permanent guard
+    against that regression."""
+    assert MARKET_DATA_MISSING_TEXT != MISSING_TEXT  # the two missing-field markers must never be the same string
+
+
+def test_map_to_template_context_without_market_data_defaults_to_not_found():  # test full backward compatibility with every pre-existing call site
+    """Every existing call site in this codebase calls
+    map_to_template_context with exactly two arguments - the new third
+    parameter must default to a safe "not found" result so none of them
+    need to change."""
+    data = ReportData(company_name="Test Co")  # minimal valid report data
+    context = map_to_template_context(data, chart_images=[])  # called exactly as every pre-existing test already calls it, no market_data argument
+    assert context["market_data"]["found"] is False  # defaults to not-found
+    assert context["market_data_rows"] == []  # no rows when not found
+    assert context["market_missing_text"] == MARKET_DATA_MISSING_TEXT  # constant is always present in the context
+
+
+def test_map_to_template_context_with_found_market_data_manual_ticker():  # test the manually-typed-ticker caption and full row set
+    """A found result from a manually-typed ticker produces the correct
+    caption wording and all 5 rows, independently null-safe."""
+    data = ReportData(company_name="Test Co")  # minimal valid report data
+    market_data = MarketDataResult(  # a fully populated, manually-resolved result
+        found=True, matched_ticker="JSWENERGY.NS", was_auto_matched=False,
+        cmp="₹526.45", market_cap="₹96,465 Cr", target_price="₹614.00", rating="BUY", sector="Utilities",
+        fetched_at_utc="2026-09-11T09:02:05+00:00",
+    )
+    context = map_to_template_context(data, chart_images=[], market_data=market_data)  # pass the market_data argument
+    assert context["market_data"]["found"] is True  # found flag carried through
+    assert "JSWENERGY.NS" in context["market_data"]["caption"]  # ticker present in caption
+    assert "auto-matched" not in context["market_data"]["caption"]  # manual-ticker wording, not auto-match wording
+    assert "not from the uploaded document" in context["market_data"]["caption"]  # required provenance disclosure
+    assert "2026-09-11 09:02 UTC" in context["market_data"]["caption"]  # human-readable display timestamp, not the raw ISO string
+    rows_by_label = {row["label"]: row["value"] for row in context["market_data_rows"]}  # index rows by label for easy assertion
+    assert rows_by_label["CMP"] == "₹526.45"  # each field passed through as-is
+    assert rows_by_label["Rating"] == "BUY"  # each field passed through as-is
+
+
+def test_map_to_template_context_with_found_market_data_auto_matched():  # test the auto-match caption wording specifically
+    """A found result from auto-match produces the auto-matched caption
+    wording, including the matched company name."""
+    data = ReportData(company_name="Test Co")  # minimal valid report data
+    market_data = MarketDataResult(  # a result resolved via auto-match
+        found=True, matched_ticker="JSWENERGY.NS", matched_company_name="JSW ENERGY LIMITED", was_auto_matched=True,
+        cmp="₹526.45", fetched_at_utc="2026-09-11T09:02:05+00:00",
+    )
+    context = map_to_template_context(data, chart_images=[], market_data=market_data)  # pass the market_data argument
+    assert "auto-matched" in context["market_data"]["caption"]  # auto-match wording present
+    assert "JSW ENERGY LIMITED" in context["market_data"]["caption"]  # matched company name shown for verification
+
+
+def test_map_to_template_context_with_partial_market_data_uses_market_missing_text():  # THE test proving the two missing-text markers are used correctly, not swapped
+    """A field the market-data source doesn't cover (e.g. rating="none"
+    from a real small-cap) must use MARKET_DATA_MISSING_TEXT, never the
+    document-extraction MISSING_TEXT - this is what makes the caption's
+    "not from the uploaded document" claim actually true for every value
+    in the section, not just most of them."""
+    data = ReportData(company_name="Test Co")  # minimal valid report data
+    market_data = MarketDataResult(found=True, matched_ticker="POCL.NS", cmp="₹454.15", rating=None, fetched_at_utc="2026-09-11T09:02:05+00:00")  # rating genuinely uncovered
+    context = map_to_template_context(data, chart_images=[], market_data=market_data)  # pass the market_data argument
+    rows_by_label = {row["label"]: row["value"] for row in context["market_data_rows"]}  # index rows by label
+    assert rows_by_label["Rating"] == MARKET_DATA_MISSING_TEXT  # uses the market-data-specific marker
+    assert rows_by_label["Rating"] != MISSING_TEXT  # explicitly NOT the document-extraction marker
+    assert rows_by_label["CMP"] == "₹454.15"  # the populated field is unaffected
+
+
+def test_map_to_template_context_market_data_not_found_produces_no_rows():  # test the not-found path produces an empty row list, no caption
+    """When market_data.found is False, no rows and no caption are
+    built - the template shows a single line instead of an empty grid."""
+    data = ReportData(company_name="Test Co")  # minimal valid report data
+    market_data = MarketDataResult(found=False)  # explicit not-found result
+    context = map_to_template_context(data, chart_images=[], market_data=market_data)  # pass the market_data argument
+    assert context["market_data"]["found"] is False  # not-found flag carried through
+    assert context["market_data"]["caption"] is None  # no caption to build when nothing was found
+    assert context["market_data_rows"] == []  # no rows to render
