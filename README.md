@@ -173,7 +173,8 @@ bull-ai-research-report-generator/
 │       ├── ADR-0002-weasyprint-matplotlib.md   ← why this PDF/chart toolchain
 │       ├── ADR-0003-plain-html-frontend.md     ← why zero client JavaScript
 │       ├── ADR-0004-full-template-fidelity.md  ← template fidelity + missing-field policy
-│       └── ADR-0005-live-market-data-enrichment.md  ← live market data as a second, independent source
+│       ├── ADR-0005-live-market-data-enrichment.md  ← live market data as a second, independent source
+│       └── ADR-0006-dual-axis-growth-charts.md  ← dual-axis growth-line overlay as a deliberate exception
 │
 ├── examples/
 │   ├── jsw_energy_report.pdf            ← sample report: fully populated fields path
