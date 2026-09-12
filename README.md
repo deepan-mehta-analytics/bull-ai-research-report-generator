@@ -225,7 +225,15 @@ bull-ai-research-report-generator/
 from the `tschoonj/GTK-for-Windows-Runtime-Environment-Installer` releases) and set the
 `WEASYPRINT_DLL_DIRECTORY` environment variable to its `bin/` directory before running —
 `app/render/renderer.py` picks this up automatically on `sys.platform == "win32"`; it's a no-op on
-macOS/Linux.
+macOS/Linux. **In Git Bash, quote the path:**
+```
+export WEASYPRINT_DLL_DIRECTORY='C:\Program Files\GTK3-Runtime Win64\bin'
+```
+An unquoted value (`export WEASYPRINT_DLL_DIRECTORY=C:\Program Files\...`) is silently stripped of
+every backslash by bash's word-splitting — the variable ends up as `C:Program FilesGTK3-Runtime
+Win64bin`, which fails the exact same DLL-load step but with a confusing `cffi`/`OSError` that gives
+no hint the cause was quoting. This applies to any Windows path assigned in Git Bash, so also avoid
+`source`-ing a `.env` file that has this variable as an unquoted line — export it directly instead.
 
 To regenerate the example PDFs: `python scripts/generate_samples.py --help` for usage (it takes
 the company name, source document path, and output filename as CLI arguments — no document names
