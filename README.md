@@ -168,13 +168,15 @@ bull-ai-research-report-generator/
 │           └── report.html              ← report layout template
 │
 ├── docs/
-│   └── decisions/
-│       ├── ADR-0001-no-rag.md           ← why no retrieval layer
-│       ├── ADR-0002-weasyprint-matplotlib.md   ← why this PDF/chart toolchain
-│       ├── ADR-0003-plain-html-frontend.md     ← why zero client JavaScript
-│       ├── ADR-0004-full-template-fidelity.md  ← template fidelity + missing-field policy
-│       ├── ADR-0005-live-market-data-enrichment.md  ← live market data as a second, independent source
-│       └── ADR-0006-dual-axis-growth-charts.md  ← dual-axis growth-line overlay as a deliberate exception
+│   ├── decisions/
+│   │   ├── ADR-0001-no-rag.md           ← why no retrieval layer
+│   │   ├── ADR-0002-weasyprint-matplotlib.md   ← why this PDF/chart toolchain
+│   │   ├── ADR-0003-plain-html-frontend.md     ← why zero client JavaScript
+│   │   ├── ADR-0004-full-template-fidelity.md  ← template fidelity + missing-field policy
+│   │   ├── ADR-0005-live-market-data-enrichment.md  ← live market data as a second, independent source
+│   │   └── ADR-0006-dual-axis-growth-charts.md  ← dual-axis growth-line overlay as a deliberate exception
+│   └── verification/
+│       └── 2026-09-11-example-data-cross-check.md  ← real-world cross-check of both example PDFs' figures
 │
 ├── examples/
 │   ├── jsw_energy_report.pdf            ← sample report: fully populated fields path
