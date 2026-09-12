@@ -1,10 +1,13 @@
 # app/main.py
 """FastAPI app: one page to submit company name + file, one route to run
 the pipeline and return the PDF. No client JavaScript - see ADR-0003."""
+import base64  # embed the generated PDF as a data: URI in the success page, per ADR-0003's zero-JS/no-extra-storage constraint
 from pathlib import Path  # pathlib for building the templates directory path
 from fastapi import FastAPI, Form, UploadFile, File  # FastAPI app class and request-parsing dependencies
-from fastapi.responses import HTMLResponse, Response  # response types for HTML pages and raw binary (PDF) bodies
+from fastapi.responses import HTMLResponse  # response type for HTML pages (form, success, and error states)
 from jinja2 import Environment, FileSystemLoader  # Jinja2 environment and filesystem template loader
+import anthropic  # exception types recognized by the friendly-error mapping below
+import pydantic  # ValidationError, the other exception type recognized by the friendly-error mapping below
 
 from .ingestion.loaders import load_document  # Task 3: turn uploaded file bytes into plain text
 from .extraction.extractor import extract_report_data  # Task 4: turn document text into a validated ReportData
@@ -24,6 +27,32 @@ def _render_form(error: str | None = None) -> str:  # render the upload form, op
     """Render the upload form, optionally with an inline error message."""
     template = _form_environment.get_template("form.html")  # load form.html from the templates environment
     return template.render(error=error)  # render the template with the optional error message
+
+
+def _render_success(company_name: str, filename: str, pdf_bytes: bytes) -> str:  # render the success page with the generated PDF embedded as a data: URI
+    """Render the success page, embedding the PDF as a base64 data: URI
+    so the download link works with zero extra server-side storage and
+    zero client JavaScript (see ADR-0003)."""
+    template = _form_environment.get_template("success.html")  # load success.html from the templates environment
+    pdf_base64 = base64.b64encode(pdf_bytes).decode("ascii")  # encode the PDF bytes as base64 text for the data: URI
+    return template.render(company_name=company_name, filename=f"{filename}_report.pdf", pdf_base64=pdf_base64)  # render with the company name, download filename, and embedded PDF
+
+
+def _friendly_error(exc: Exception) -> str:  # map known exception types to plain-language, non-technical messages
+    """Translate exception types a user could plausibly hit into
+    actionable text. Anything not explicitly listed here keeps its
+    original message unchanged - most exceptions raised in this
+    pipeline (e.g. the "not enough trend data" ValueError) already
+    carry a user-facing message written for this exact purpose."""
+    if isinstance(exc, anthropic.RateLimitError):  # most specific first: RateLimitError is itself an APIStatusError
+        return "The AI extraction service is busy right now - wait a moment and try again."
+    if isinstance(exc, anthropic.APIConnectionError):  # network-level failure reaching the API
+        return "Couldn't reach the AI extraction service - check your connection and try again."
+    if isinstance(exc, anthropic.APIStatusError):  # any other API-side error (auth, bad request, server error)
+        return "The AI extraction service had a problem processing this document - try again in a moment."
+    if isinstance(exc, pydantic.ValidationError):  # the extracted data didn't match the expected schema shape
+        return "The document's extraction didn't come out in the expected shape - try again."
+    return str(exc)  # no specific mapping - show the exception's own message, unchanged from today's behavior
 
 
 def _safe_filename(company_name: str) -> str:  # sanitize a company name for use in a download filename
@@ -61,11 +90,7 @@ def generate_report(company_name: str = Form(...), ticker: str = Form(""), file:
         context = map_to_template_context(report_data, chart_images, market_data)  # build the missing-field-safe template context
         pdf_bytes = render_pdf(context)  # render the context to PDF bytes
     except Exception as exc:  # catch any pipeline failure (bad file type, extraction error, missing chart data, market-data failure if it somehow raises, etc.)
-        return HTMLResponse(content=_render_form(error=str(exc)), status_code=400)  # re-show the form with the error message and a 400 status
+        return HTMLResponse(content=_render_form(error=_friendly_error(exc)), status_code=400)  # re-show the form with a plain-language error message and a 400 status
 
     filename = _safe_filename(company_name)  # sanitize the company name for the download filename
-    return Response(  # build the raw PDF response
-        content=pdf_bytes,  # the rendered PDF bytes
-        media_type="application/pdf",  # tell the browser this is a PDF
-        headers={"Content-Disposition": f'attachment; filename="{filename}_report.pdf"'},  # prompt a download with a friendly filename
-    )
+    return HTMLResponse(content=_render_success(company_name, filename, pdf_bytes))  # show a distinct success page with the PDF embedded as a downloadable data: URI

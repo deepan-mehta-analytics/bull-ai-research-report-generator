@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Research Report Generator</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f6f5; display: flex; justify-content: center; padding-top: 60px; }
+  .card { background: #ffffff; border-radius: 8px; padding: 32px; width: 380px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }
+  h1 { font-size: 18px; color: #0f7a6c; margin-top: 0; }
+  p { font-size: 14px; color: #333333; }
+  .download { display: block; margin-top: 20px; width: 100%; padding: 10px; background: #0f7a6c; color: #ffffff; border: none; border-radius: 4px; font-size: 14px; text-decoration: none; box-sizing: border-box; }
+  .again { display: block; margin-top: 16px; font-size: 13px; color: #0f7a6c; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>✅ Report ready</h1>
+    <p>Your research report for "{{ company_name }}" has been generated.</p>
+    <a class="download" href="data:application/pdf;base64,{{ pdf_base64 }}" download="{{ filename }}">Download PDF</a>
+    <a class="again" href="/">Generate another report →</a>
+  </div>
+</body>
+</html>

@@ -24,7 +24,7 @@ analyst-style report out — at MVP scope.
 [![Python](https://img.shields.io/badge/Python-3.11-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Anthropic Claude](https://img.shields.io/badge/Anthropic-Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white)](https://www.anthropic.com/)
-[![Tests](https://img.shields.io/badge/Tests-84_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
+[![Tests](https://img.shields.io/badge/Tests-89_passed-success?style=for-the-badge&logo=pytest&logoColor=white)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 [![Status](https://img.shields.io/badge/Status-Complete-brightgreen?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 [![Live Market Data](https://img.shields.io/badge/Live_Data-Yahoo_Finance-orange?style=for-the-badge)](https://github.com/deepan-mehta-analytics/bull-ai-research-report-generator)
 
@@ -39,8 +39,9 @@ JavaScript.**
 It implements:
 
 - **Zero-JS upload flow** — a plain HTML form (company name + PDF/CSV/TXT file) posts directly to
-  `POST /generate`, which returns the PDF as a file download; no frontend framework, no client
-  JavaScript at all (`app/main.py`).
+  `POST /generate`, which returns a success page (the PDF embedded as a click-through download
+  link, no server-side file storage) or the form re-rendered with a plain-language error; no
+  frontend framework, no client JavaScript at all (`app/main.py`).
 - **LLM-driven structured extraction** — Anthropic Claude (`claude-opus-5` by default, overridable
   via the `ANTHROPIC_MODEL` env var) extracts a validated schema from raw document text
   (`app/extraction/extractor.py`). Extraction is schema-flexible rather than rules-per-sector: the
@@ -125,12 +126,12 @@ that stays correct under that inconsistency instead of failing silently.
 [render_pdf]  ── app/render/                Jinja2 HTML render → WeasyPrint PDF conversion
         │
         ▼
-[PDF download]
+[Success page: PDF embedded as a data: URI download link]
 ```
 
 | Component | Package | Purpose |
 |---|---|---|
-| API / form | `app/main.py` | Serves the upload form, orchestrates the pipeline, returns the PDF |
+| API / form | `app/main.py` | Serves the upload form, orchestrates the pipeline, returns a success page (PDF download link) or a plain-language error |
 | Ingestion | `app/ingestion/` | Turns PDF/CSV/TXT bytes into plain text |
 | Extraction | `app/extraction/` | Calls Claude to extract a validated `ReportData` schema |
 | Charts | `app/charts/` | Renders numeric chart series to embeddable PNG images |
@@ -164,7 +165,8 @@ bull-ai-research-report-generator/
 │   └── render/
 │       ├── renderer.py                  ← Jinja2 HTML render + WeasyPrint PDF conversion
 │       └── templates/
-│           ├── form.html                ← upload form template
+│           ├── form.html                ← upload form template (also re-rendered on failure, with an inline error)
+│           ├── success.html             ← success confirmation page with the embedded PDF download link
 │           └── report.html              ← report layout template
 │
 ├── docs/
@@ -218,7 +220,8 @@ bull-ai-research-report-generator/
    uvicorn app.main:app --reload
    ```
 4. Open `http://127.0.0.1:8000`, enter a company name, upload a PDF/CSV/TXT document, and click
-   "Generate report" to download the PDF.
+   "Generate report." On success you'll land on a confirmation page with a "Download PDF" button;
+   on failure the form re-shows with a plain-language reason.
 5. Optionally enter a stock ticker (e.g. `JSWENERGY.NS`) to include live market data in the report,
    or leave it blank to auto-match from the company name.
 
@@ -254,7 +257,7 @@ Tests run automatically on every push/PR via GitHub Actions — see
 pytest
 ```
 
-**84 passed**, 0 failed (verified against `main`, with `WEASYPRINT_DLL_DIRECTORY` set on Windows).
+**89 passed**, 0 failed (verified against `main`, with `WEASYPRINT_DLL_DIRECTORY` set on Windows).
 The suite is fully mocked against the Anthropic API and against Yahoo Finance (`yfinance`) — no
 network access or API key is required to run it. CI (`.github/workflows/tests.yml`) runs the same
 suite on every push/PR.

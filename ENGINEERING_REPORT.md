@@ -13,8 +13,9 @@ what was deliberately left out of scope, per the assessment's own "minimal web a
 - **ADR-0002 — WeasyPrint + matplotlib, not Playwright or ReportLab.** Pure-Python, no browser
   binary to manage under deadline pressure, sufficient CSS support for this layout.
 - **ADR-0003 — Plain server-rendered HTML, zero client JavaScript.** The PRD specifies exactly two
-  inputs and one output control; a multipart form POST returning a PDF with
-  `Content-Disposition: attachment` downloads natively with no JS at all.
+  inputs and one output control; a multipart form POST returns a distinct success page (the PDF
+  embedded as a `data:` URI download link, no server-side storage needed) or the form re-rendered
+  with a plain-language error — no JS, no new endpoint.
 - **ADR-0004 — Full template fidelity, universal missing-field handling, no fabricated advice.**
   Every section of the sample is rebuilt; every field/row/chart independently renders "Not
   available in source document" rather than being invented or dropped; the disclaimer section
